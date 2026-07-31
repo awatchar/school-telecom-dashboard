@@ -1,2 +1,22 @@
-# school-telecom-dashboard
-Interactive dashboard for monitoring school participation and geographic distribution in the nationwide telecommunications learning promotion project.
+# School Telecom Dashboard
+
+Dashboard แบบ Interactive สำหรับติดตามและประเมินผลโครงการส่งเสริมการเรียนรู้ทางด้านโทรคมนาคมในโรงเรียนทั่วประเทศ
+
+## ข้อมูลที่แสดง
+
+- โรงเรียนที่สมัครทั้งหมด
+- โรงเรียนที่ผ่านการคัดเลือก
+- โรงเรียนที่เข้าร่วมอบรม
+- การกระจายตัวตามจังหวัดและภูมิภาค
+- ตำแหน่งสถานศึกษาบนแผนที่
+- ระดับความแม่นยำของพิกัด (`OK` และ `ESTIMATED`)
+
+## การอัปเดตข้อมูล
+
+GitHub Actions จะดึงข้อมูลจากชีต `Dashboard_Data` ทุกวันเวลา 07:17 น. ตามเวลาประเทศไทย และตรวจยอดสำคัญก่อนอัปเดต `data/schools.json`
+
+พิกัดที่มีสถานะ `ESTIMATED` เป็นตำแหน่งประมาณจากศูนย์กลางตำบล/แขวงหรืออำเภอ/เขต ไม่ใช่ตำแหน่งอาคารสถานศึกษาที่ได้รับการยืนยัน
+
+## Technology
+
+Static HTML, CSS, JavaScript, Leaflet และ OpenStreetMap ออกแบบสำหรับ GitHub Pages โดยไม่ต้องใช้เซิร์ฟเวอร์หรือฐานข้อมูล
