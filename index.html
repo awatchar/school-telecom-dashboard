@@ -18,8 +18,6 @@
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIINfQ3ynhHQVfJTgUiK7KrWlZcW6cnd96A="
-      crossorigin=""
     />
     <link
       rel="stylesheet"
@@ -58,7 +56,7 @@
           <h1>การกระจายตัวของโรงเรียน<br />ด้านการเรียนรู้โทรคมนาคม</h1>
           <p class="hero-description">
             มองภาพรวมตั้งแต่การสมัคร การผ่านคัดเลือก ไปจนถึงการเข้าร่วมอบรม
-            พร้อมตำแหน่งสถานศึกษาและคุณภาพข้อมูลพิกัดในหน้าจอเดียว
+            พร้อมสำรวจตำแหน่งสถานศึกษาและความครอบคลุมทั่วประเทศในหน้าจอเดียว
           </p>
         </div>
         <div class="hero-insight">
@@ -101,11 +99,11 @@
         </article>
         <article class="kpi-card kpi-location">
           <div class="kpi-topline">
-            <span class="kpi-icon" aria-hidden="true">GPS</span>
-            <span class="kpi-label">คุณภาพพิกัด</span>
+            <span class="kpi-icon" aria-hidden="true">TH</span>
+            <span class="kpi-label">จังหวัดที่ครอบคลุม</span>
           </div>
-          <strong id="kpi-verified">—</strong>
-          <p>ตรวจสอบได้ · ประมาณ <span id="kpi-estimated">—</span> แห่ง</p>
+          <strong id="kpi-provinces">—</strong>
+          <p>จาก 77 จังหวัด · ครบ <span id="kpi-regions">—</span> ภูมิภาค</p>
         </article>
       </section>
 
@@ -149,14 +147,6 @@
               <option value="all">ทุกจังหวัด</option>
             </select>
           </label>
-          <label>
-            <span>ความแม่นยำพิกัด</span>
-            <select id="geo-filter">
-              <option value="all">พิกัดทั้งหมด</option>
-              <option value="OK">ตรวจสอบได้</option>
-              <option value="ESTIMATED">พิกัดประมาณ</option>
-            </select>
-          </label>
         </div>
         <div class="filter-result" aria-live="polite">
           แสดง <strong id="visible-count">—</strong> แห่ง
@@ -171,15 +161,11 @@
               <p class="section-kicker">Geographic distribution</p>
               <h2>แผนที่ตำแหน่งสถานศึกษา</h2>
             </div>
-            <div class="map-legend" aria-label="คำอธิบายสัญลักษณ์">
-              <span><i class="legend-dot verified"></i> ตรวจสอบได้</span>
-              <span><i class="legend-dot estimated"></i> พิกัดประมาณ</span>
-            </div>
           </div>
           <div id="map" aria-label="แผนที่สถานศึกษาในประเทศไทย"></div>
           <div class="map-note">
-            หมุดสีส้มเป็นตำแหน่งประมาณจากศูนย์กลางตำบล/แขวงหรืออำเภอ/เขต
-            ไม่ควรใช้วัดระยะทางระดับถนน
+            คลิกหมุดเพื่อดูรายละเอียดสถานศึกษา
+            และใช้ตัวกรองด้านบนเพื่อสำรวจพื้นที่ที่สนใจ
           </div>
         </article>
 
@@ -194,27 +180,27 @@
             <div class="funnel" id="funnel-chart"></div>
           </article>
 
-          <article class="panel quality-panel">
+          <article class="panel coverage-panel">
             <div class="panel-heading compact">
               <div>
-                <p class="section-kicker">Data confidence</p>
-                <h2>ความพร้อมของข้อมูลแผนที่</h2>
+                <p class="section-kicker">Area coverage</p>
+                <h2>ภาพรวมพื้นที่ครอบคลุม</h2>
               </div>
             </div>
-            <div class="quality-ring" id="quality-ring">
+            <div class="coverage-ring" id="province-ring">
               <div>
-                <strong id="quality-percent">—</strong>
-                <span>ยืนยันพิกัด</span>
+                <strong id="province-percent">—</strong>
+                <span>ครอบคลุมจังหวัด</span>
               </div>
             </div>
-            <div class="quality-breakdown">
+            <div class="coverage-breakdown">
               <div>
-                <span>ตรวจสอบได้</span>
-                <strong id="quality-verified">—</strong>
+                <span>จังหวัด</span>
+                <strong id="coverage-provinces">—</strong>
               </div>
               <div>
-                <span>ประมาณจากพื้นที่</span>
-                <strong id="quality-estimated">—</strong>
+                <span>ภูมิภาค</span>
+                <strong id="coverage-regions">—</strong>
               </div>
             </div>
           </article>
@@ -260,7 +246,6 @@
                 <th>จังหวัด / ภูมิภาค</th>
                 <th>สถานะ</th>
                 <th>คะแนน</th>
-                <th>พิกัด</th>
               </tr>
             </thead>
             <tbody id="school-table-body"></tbody>
@@ -296,3 +281,4 @@
     <script src="./app.js"></script>
   </body>
 </html>
+
