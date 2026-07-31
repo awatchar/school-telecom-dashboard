@@ -84,10 +84,6 @@ const schools = rawRows
     score: numberOrNull(row.score_total),
     latitude: numberOrNull(row.latitude),
     longitude: numberOrNull(row.longitude),
-    geoAccuracy: row.geo_accuracy,
-    geoStatus: row.geo_status,
-    geoSource: row.geo_source,
-    geoLabel: row.geo_label,
     dataStatus: row.data_status,
     updatedAt: row.source_updated_at,
   }));
@@ -100,12 +96,8 @@ const metadata = {
     applied: schools.filter((school) => school.applied).length,
     selected: schools.filter((school) => school.selected).length,
     attended: schools.filter((school) => school.attended).length,
-    verifiedCoordinates: schools.filter((school) => school.geoStatus === "OK")
-      .length,
-    estimatedCoordinates: schools.filter(
-      (school) => school.geoStatus === "ESTIMATED",
-    ).length,
     provinces: new Set(schools.map((school) => school.province)).size,
+    regions: new Set(schools.map((school) => school.region)).size,
   },
 };
 
@@ -138,3 +130,4 @@ fs.writeFileSync(
   "utf8",
 );
 console.log(JSON.stringify(metadata.counts));
+
