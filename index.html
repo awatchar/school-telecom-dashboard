@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Dashboard ติดตามการกระจายตัวของสถานศึกษาที่สมัคร ผ่านการคัดเลือก และเข้าร่วมอบรมในโครงการส่งเสริมการเรียนรู้ทางด้านโทรคมนาคมในโรงเรียนทั่วประเทศ"
+    />
+    <meta name="theme-color" content="#082f49" />
+    <title>School Telecom Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIINfQ3ynhHQVfJTgUiK7KrWlZcW6cnd96A="
+      crossorigin=""
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#dashboard-main">ข้ามไปยัง Dashboard</a>
+
+    <header class="site-header">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+        <div>
+          <p class="brand-kicker">Nationwide School Network</p>
+          <p class="brand-name">Telecom Learning Dashboard</p>
+        </div>
+      </div>
+      <div class="header-meta">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span>ข้อมูลจาก Dashboard_Data</span>
+        <span id="updated-at">กำลังโหลดข้อมูล…</span>
+      </div>
+    </header>
+
+    <main id="dashboard-main">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">ติดตามและประเมินผลโครงการระดับประเทศ</p>
+          <h1>การกระจายตัวของโรงเรียน<br />ด้านการเรียนรู้โทรคมนาคม</h1>
+          <p class="hero-description">
+            มองภาพรวมตั้งแต่การสมัคร การผ่านคัดเลือก ไปจนถึงการเข้าร่วมอบรม
+            พร้อมตำแหน่งสถานศึกษาและคุณภาพข้อมูลพิกัดในหน้าจอเดียว
+          </p>
+        </div>
+        <div class="hero-insight">
+          <p class="insight-label">Coverage snapshot</p>
+          <div class="coverage-number">
+            <strong id="hero-provinces">—</strong>
+            <span>จังหวัด</span>
+          </div>
+          <div class="coverage-track" aria-hidden="true">
+            <span id="coverage-progress"></span>
+          </div>
+          <p id="coverage-caption">กำลังคำนวณพื้นที่ครอบคลุม</p>
+        </div>
+      </section>
+
+      <section class="kpi-grid" aria-label="ตัวชี้วัดหลัก">
+        <article class="kpi-card kpi-applied">
+          <div class="kpi-topline">
+            <span class="kpi-icon" aria-hidden="true">01</span>
+            <span class="kpi-label">โรงเรียนที่สมัคร</span>
+          </div>
+          <strong id="kpi-applied">—</strong>
+          <p>ฐานโรงเรียนทั้งหมดในโครงการ</p>
+        </article>
+        <article class="kpi-card kpi-selected">
+          <div class="kpi-topline">
+            <span class="kpi-icon" aria-hidden="true">02</span>
+            <span class="kpi-label">ผ่านการคัดเลือก</span>
+          </div>
+          <strong id="kpi-selected">—</strong>
+          <p><span id="selected-rate">—</span> ของผู้สมัครทั้งหมด</p>
+        </article>
+        <article class="kpi-card kpi-attended">
+          <div class="kpi-topline">
+            <span class="kpi-icon" aria-hidden="true">03</span>
+            <span class="kpi-label">เข้าร่วมอบรม</span>
+          </div>
+          <strong id="kpi-attended">—</strong>
+          <p><span id="attended-rate">—</span> ของโรงเรียนที่ผ่าน</p>
+        </article>
+        <article class="kpi-card kpi-location">
+          <div class="kpi-topline">
+            <span class="kpi-icon" aria-hidden="true">GPS</span>
+            <span class="kpi-label">คุณภาพพิกัด</span>
+          </div>
+          <strong id="kpi-verified">—</strong>
+          <p>ตรวจสอบได้ · ประมาณ <span id="kpi-estimated">—</span> แห่ง</p>
+        </article>
+      </section>
+
+      <section class="filter-shell" aria-label="ตัวกรองข้อมูล">
+        <div class="filter-heading">
+          <div>
+            <p class="section-kicker">Explore the data</p>
+            <h2>เลือกมุมมองที่ต้องการติดตาม</h2>
+          </div>
+          <button id="reset-filters" class="text-button" type="button">
+            ล้างตัวกรอง
+          </button>
+        </div>
+        <div class="filter-grid">
+          <label class="search-field">
+            <span>ค้นหาโรงเรียน</span>
+            <input
+              id="search-input"
+              type="search"
+              placeholder="ชื่อโรงเรียน จังหวัด หรือสังกัด"
+              autocomplete="off"
+            />
+          </label>
+          <label>
+            <span>สถานะโครงการ</span>
+            <select id="stage-filter">
+              <option value="applied">สมัครทั้งหมด</option>
+              <option value="selected">ผ่านการคัดเลือก</option>
+              <option value="attended">เข้าร่วมอบรม</option>
+            </select>
+          </label>
+          <label>
+            <span>ภูมิภาค</span>
+            <select id="region-filter">
+              <option value="all">ทุกภูมิภาค</option>
+            </select>
+          </label>
+          <label>
+            <span>จังหวัด</span>
+            <select id="province-filter">
+              <option value="all">ทุกจังหวัด</option>
+            </select>
+          </label>
+          <label>
+            <span>ความแม่นยำพิกัด</span>
+            <select id="geo-filter">
+              <option value="all">พิกัดทั้งหมด</option>
+              <option value="OK">ตรวจสอบได้</option>
+              <option value="ESTIMATED">พิกัดประมาณ</option>
+            </select>
+          </label>
+        </div>
+        <div class="filter-result" aria-live="polite">
+          แสดง <strong id="visible-count">—</strong> แห่ง
+          <span id="active-filter-summary">จากข้อมูลทั้งหมด</span>
+        </div>
+      </section>
+
+      <section class="analysis-grid">
+        <article class="panel map-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="section-kicker">Geographic distribution</p>
+              <h2>แผนที่ตำแหน่งสถานศึกษา</h2>
+            </div>
+            <div class="map-legend" aria-label="คำอธิบายสัญลักษณ์">
+              <span><i class="legend-dot verified"></i> ตรวจสอบได้</span>
+              <span><i class="legend-dot estimated"></i> พิกัดประมาณ</span>
+            </div>
+          </div>
+          <div id="map" aria-label="แผนที่สถานศึกษาในประเทศไทย"></div>
+          <div class="map-note">
+            หมุดสีส้มเป็นตำแหน่งประมาณจากศูนย์กลางตำบล/แขวงหรืออำเภอ/เขต
+            ไม่ควรใช้วัดระยะทางระดับถนน
+          </div>
+        </article>
+
+        <aside class="side-stack">
+          <article class="panel funnel-panel">
+            <div class="panel-heading compact">
+              <div>
+                <p class="section-kicker">Participation funnel</p>
+                <h2>เส้นทางการเข้าร่วม</h2>
+              </div>
+            </div>
+            <div class="funnel" id="funnel-chart"></div>
+          </article>
+
+          <article class="panel quality-panel">
+            <div class="panel-heading compact">
+              <div>
+                <p class="section-kicker">Data confidence</p>
+                <h2>ความพร้อมของข้อมูลแผนที่</h2>
+              </div>
+            </div>
+            <div class="quality-ring" id="quality-ring">
+              <div>
+                <strong id="quality-percent">—</strong>
+                <span>ยืนยันพิกัด</span>
+              </div>
+            </div>
+            <div class="quality-breakdown">
+              <div>
+                <span>ตรวจสอบได้</span>
+                <strong id="quality-verified">—</strong>
+              </div>
+              <div>
+                <span>ประมาณจากพื้นที่</span>
+                <strong id="quality-estimated">—</strong>
+              </div>
+            </div>
+          </article>
+        </aside>
+      </section>
+
+      <section class="lower-grid">
+        <article class="panel province-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="section-kicker">Province ranking</p>
+              <h2>จังหวัดที่มีโรงเรียนเข้าร่วมมากที่สุด</h2>
+            </div>
+            <span class="panel-badge" id="ranking-stage">สมัครทั้งหมด</span>
+          </div>
+          <div id="province-ranking" class="ranking-list"></div>
+        </article>
+
+        <article class="panel region-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="section-kicker">Regional balance</p>
+              <h2>สัดส่วนตามภูมิภาค</h2>
+            </div>
+          </div>
+          <div id="region-chart" class="region-chart"></div>
+        </article>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="section-kicker">School directory</p>
+            <h2>รายชื่อสถานศึกษา</h2>
+          </div>
+          <span class="panel-badge">เรียงตามจังหวัด</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>สถานศึกษา</th>
+                <th>จังหวัด / ภูมิภาค</th>
+                <th>สถานะ</th>
+                <th>คะแนน</th>
+                <th>พิกัด</th>
+              </tr>
+            </thead>
+            <tbody id="school-table-body"></tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <p id="table-caption">แสดงข้อมูลสูงสุด 50 รายการ</p>
+          <button id="show-more" class="secondary-button" type="button">
+            แสดงเพิ่ม
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        โครงการส่งเสริมการเรียนรู้ทางด้านโทรคมนาคมในโรงเรียนทั่วประเทศ
+      </p>
+      <p>ข้อมูลสำหรับติดตามและประเมินผลโครงการ</p>
+    </footer>
+
+    <div id="loading-overlay" role="status" aria-live="polite">
+      <div class="loader"></div>
+      <p>กำลังเตรียมข้อมูล Dashboard…</p>
+    </div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
