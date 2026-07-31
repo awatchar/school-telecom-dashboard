@@ -34,6 +34,17 @@ const data = JSON.parse(
 );
 const schools = data.schools;
 const uniqueIds = new Set(schools.map((school) => school.id));
+const privateCoordinateFields = [
+  "geoAccuracy",
+  "geoStatus",
+  "geoSource",
+  "geoLabel",
+];
+const exposedCoordinateFields = schools.filter((school) =>
+  privateCoordinateFields.some((field) =>
+    Object.prototype.hasOwnProperty.call(school, field),
+  ),
+);
 const invalidCoordinates = schools.filter(
   (school) =>
     !Number.isFinite(school.latitude) ||
@@ -50,9 +61,7 @@ const actual = {
   applied: schools.filter((school) => school.applied).length,
   selected: schools.filter((school) => school.selected).length,
   attended: schools.filter((school) => school.attended).length,
-  verified: schools.filter((school) => school.geoStatus === "OK").length,
-  estimated: schools.filter((school) => school.geoStatus === "ESTIMATED")
-    .length,
+  exposedCoordinateFields: exposedCoordinateFields.length,
   invalidCoordinates: invalidCoordinates.length,
   provinces: new Set(schools.map((school) => school.province)).size,
 };
@@ -63,8 +72,7 @@ const expected = {
   applied: 345,
   selected: 316,
   attended: 250,
-  verified: 312,
-  estimated: 33,
+  exposedCoordinateFields: 0,
   invalidCoordinates: 0,
   provinces: 71,
 };
@@ -78,3 +86,4 @@ for (const [key, value] of Object.entries(expected)) {
 }
 
 console.log(JSON.stringify({ valid: true, ...actual }, null, 2));
+
