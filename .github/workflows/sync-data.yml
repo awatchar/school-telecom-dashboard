@@ -23,7 +23,7 @@ jobs:
 
       - name: Commit data changes
         run: |
-          if git diff --quiet -- data/schools.json; then
+          if [ -z "$(git status --porcelain -- data/schools.json)" ]; then
             echo "Dashboard data is already current."
             exit 0
           fi
