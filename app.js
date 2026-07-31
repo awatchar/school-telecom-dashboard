@@ -23,6 +23,7 @@ const state = {
   tableLimit: TABLE_PAGE_SIZE,
   map: null,
   markers: null,
+  mapResizeObserver: null,
 };
 
 const elements = {};
@@ -42,6 +43,11 @@ async function initialize() {
     initializeMap();
     updateDashboard({ fitMap: true });
     elements.loadingOverlay.classList.add("hidden");
+    refreshMapLayout(true);
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(() => refreshMapLayout(true));
+    }
+    window.setTimeout(() => refreshMapLayout(true), 300);
   } catch (error) {
     showError(error);
   }
@@ -89,10 +95,6 @@ function buildDataFromCsv(csvText) {
       score: csvNumber(row.score_total),
       latitude: csvNumber(row.latitude),
       longitude: csvNumber(row.longitude),
-      geoAccuracy: row.geo_accuracy,
-      geoStatus: row.geo_status,
-      geoSource: row.geo_source,
-      geoLabel: row.geo_label,
       dataStatus: row.data_status,
       updatedAt: row.source_updated_at,
     }));
@@ -105,13 +107,8 @@ function buildDataFromCsv(csvText) {
         applied: schools.filter((school) => school.applied).length,
         selected: schools.filter((school) => school.selected).length,
         attended: schools.filter((school) => school.attended).length,
-        verifiedCoordinates: schools.filter(
-          (school) => school.geoStatus === "OK",
-        ).length,
-        estimatedCoordinates: schools.filter(
-          (school) => school.geoStatus === "ESTIMATED",
-        ).length,
         provinces: new Set(schools.map((school) => school.province)).size,
+        regions: new Set(schools.map((school) => school.region)).size,
       },
     },
     schools,
@@ -172,19 +169,18 @@ function cacheElements() {
     "kpi-applied",
     "kpi-selected",
     "kpi-attended",
-    "kpi-verified",
-    "kpi-estimated",
+    "kpi-provinces",
+    "kpi-regions",
     "selected-rate",
     "attended-rate",
-    "quality-percent",
-    "quality-verified",
-    "quality-estimated",
-    "quality-ring",
+    "province-percent",
+    "province-ring",
+    "coverage-provinces",
+    "coverage-regions",
     "search-input",
     "stage-filter",
     "region-filter",
     "province-filter",
-    "geo-filter",
     "reset-filters",
     "visible-count",
     "active-filter-summary",
@@ -214,7 +210,6 @@ function bindControls() {
     elements.stageFilter,
     elements.regionFilter,
     elements.provinceFilter,
-    elements.geoFilter,
   ].forEach((control) => {
     control.addEventListener("change", () => {
       if (control === elements.regionFilter) updateProvinceOptions();
@@ -227,7 +222,6 @@ function bindControls() {
     elements.searchInput.value = "";
     elements.stageFilter.value = "applied";
     elements.regionFilter.value = "all";
-    elements.geoFilter.value = "all";
     updateProvinceOptions();
     elements.provinceFilter.value = "all";
     state.tableLimit = TABLE_PAGE_SIZE;
@@ -271,14 +265,15 @@ function renderGlobalMetrics() {
   const counts = state.metadata.counts;
   const selectedRate = percent(counts.selected, counts.applied);
   const attendedRate = percent(counts.attended, counts.selected);
-  const qualityRate = percent(counts.verifiedCoordinates, counts.schools);
-  const provinceCoverage = (counts.provinces / 77) * 100;
+  const provinceCoverage = percent(counts.provinces, 77);
+  const regionCount =
+    counts.regions ?? new Set(state.schools.map((school) => school.region)).size;
 
   elements.kpiApplied.textContent = formatNumber(counts.applied);
   elements.kpiSelected.textContent = formatNumber(counts.selected);
   elements.kpiAttended.textContent = formatNumber(counts.attended);
-  elements.kpiVerified.textContent = formatNumber(counts.verifiedCoordinates);
-  elements.kpiEstimated.textContent = formatNumber(counts.estimatedCoordinates);
+  elements.kpiProvinces.textContent = formatNumber(counts.provinces);
+  elements.kpiRegions.textContent = formatNumber(regionCount);
   elements.selectedRate.textContent = `${selectedRate}%`;
   elements.attendedRate.textContent = `${attendedRate}%`;
   elements.heroProvinces.textContent = formatNumber(counts.provinces);
@@ -286,14 +281,13 @@ function renderGlobalMetrics() {
   elements.coverageCaption.textContent =
     `ครอบคลุม ${counts.provinces} จาก 77 จังหวัดทั่วประเทศ`;
 
-  elements.qualityPercent.textContent = `${qualityRate}%`;
-  elements.qualityVerified.textContent = formatNumber(
-    counts.verifiedCoordinates,
+  elements.provincePercent.textContent = `${provinceCoverage}%`;
+  elements.coverageProvinces.textContent = `${formatNumber(counts.provinces)} / 77`;
+  elements.coverageRegions.textContent = `${formatNumber(regionCount)} ภูมิภาค`;
+  elements.provinceRing.style.setProperty(
+    "--coverage",
+    `${provinceCoverage}%`,
   );
-  elements.qualityEstimated.textContent = formatNumber(
-    counts.estimatedCoordinates,
-  );
-  elements.qualityRing.style.setProperty("--quality", `${qualityRate}%`);
 
   const sourceDate = newestSourceDate(state.schools);
   const date = sourceDate || new Date(state.metadata.generatedAt);
@@ -323,6 +317,24 @@ function initializeMap() {
     spiderfyOnMaxZoom: true,
   });
   state.map.addLayer(state.markers);
+
+  const mapElement = document.getElementById("map");
+  const handleResize = debounce(() => refreshMapLayout(false), 80);
+  state.mapResizeObserver = new ResizeObserver(handleResize);
+  state.mapResizeObserver.observe(mapElement);
+  window.addEventListener("orientationchange", () => {
+    window.setTimeout(() => refreshMapLayout(false), 150);
+  });
+}
+
+function refreshMapLayout(fitMap) {
+  if (!state.map) return;
+  window.requestAnimationFrame(() => {
+    state.map.invalidateSize({ animate: false, pan: false });
+    if (fitMap && state.filtered.length > 0) {
+      renderMap(state.filtered, true);
+    }
+  });
 }
 
 function updateDashboard({ fitMap }) {
@@ -350,7 +362,6 @@ function getFilters() {
     stage: elements.stageFilter.value,
     region: elements.regionFilter.value,
     province: elements.provinceFilter.value,
-    geoStatus: elements.geoFilter.value,
   };
 }
 
@@ -361,12 +372,6 @@ function applyFilters(schools, filters, { includeStage }) {
     if (
       filters.province !== "all" &&
       school.province !== filters.province
-    ) {
-      return false;
-    }
-    if (
-      filters.geoStatus !== "all" &&
-      school.geoStatus !== filters.geoStatus
     ) {
       return false;
     }
@@ -384,8 +389,6 @@ function buildFilterSummary(filters) {
   const parts = [];
   if (filters.region !== "all") parts.push(filters.region);
   if (filters.province !== "all") parts.push(`จังหวัด${filters.province}`);
-  if (filters.geoStatus === "OK") parts.push("พิกัดตรวจสอบได้");
-  if (filters.geoStatus === "ESTIMATED") parts.push("พิกัดประมาณ");
   if (filters.query) parts.push(`คำค้น “${elements.searchInput.value.trim()}”`);
   return parts.length > 0 ? `· ${parts.join(" · ")}` : "จากข้อมูลทั้งหมด";
 }
@@ -398,11 +401,9 @@ function renderMap(schools, fitMap) {
     if (!Number.isFinite(school.latitude) || !Number.isFinite(school.longitude)) {
       return;
     }
-    const estimated = school.geoStatus === "ESTIMATED";
-    const color = estimated ? "#f59e0b" : "#14b8a6";
     const icon = L.divIcon({
       className: "",
-      html: `<div class="school-marker" style="--marker-color:${color}"></div>`,
+      html: '<div class="school-marker" style="--marker-color:#14b8a6"></div>',
       iconSize: [20, 20],
       iconAnchor: [10, 20],
       popupAnchor: [0, -20],
@@ -431,10 +432,10 @@ function buildPopup(school) {
   ]
     .filter(Boolean)
     .join(" · ");
-  const geo =
-    school.geoStatus === "ESTIMATED"
-      ? "พิกัดประมาณจากพื้นที่ปกครอง"
-      : "พิกัดตรวจสอบได้";
+  const score =
+    school.score == null
+      ? ""
+      : `<p><b>คะแนน:</b> ${formatNumber(school.score)}</p>`;
 
   return `
     <div class="popup-school">
@@ -442,8 +443,8 @@ function buildPopup(school) {
       <p>${escapeHtml(school.province)} · ${escapeHtml(school.region)}</p>
       <p>${escapeHtml(stages)}</p>
       <div class="popup-meta">
-        <p><b>พิกัด:</b> ${escapeHtml(geo)}</p>
         <p>${escapeHtml(school.affiliation || "ไม่ระบุสังกัด")}</p>
+        ${score}
       </div>
     </div>`;
 }
@@ -536,7 +537,7 @@ function renderTable(schools) {
 
   elements.schoolTableBody.innerHTML =
     visible.length === 0
-      ? `<tr><td colspan="5">${emptyState("ไม่พบสถานศึกษาตามตัวกรอง")}</td></tr>`
+      ? `<tr><td colspan="4">${emptyState("ไม่พบสถานศึกษาตามตัวกรอง")}</td></tr>`
       : visible.map(buildTableRow).join("");
 
   elements.tableCaption.textContent =
@@ -558,8 +559,6 @@ function buildTableRow(school) {
   ]
     .filter(Boolean)
     .join("");
-  const estimated = school.geoStatus === "ESTIMATED";
-
   return `
     <tr>
       <td>
@@ -569,11 +568,6 @@ function buildTableRow(school) {
       <td>${escapeHtml(school.province)}<br><span class="school-affiliation">${escapeHtml(school.region)}</span></td>
       <td><div class="status-stack">${stages}</div></td>
       <td>${school.score == null ? "—" : formatNumber(school.score)}</td>
-      <td>
-        <span class="geo-pill ${estimated ? "estimated" : "verified"}">
-          ${estimated ? "ประมาณ" : "ตรวจสอบแล้ว"}
-        </span>
-      </td>
     </tr>`;
 }
 
@@ -651,3 +645,4 @@ function debounce(callback, delay) {
 function toCamelCase(value) {
   return value.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
 }
+
